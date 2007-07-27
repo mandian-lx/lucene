@@ -1,36 +1,73 @@
+# Copyright (c) 2000-2005, JPackate Project
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the JPackage Project nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
 %define section         devel
-%define version		1.9.1
-%define nversion	1.9.2-dev
-%define gcj_support	1
-%if %{gcj_support}
-ExclusiveArch: %{ix86} x86_64 ppc
-%endif
+%define gcj_support         1
 
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
-Version:        %{version}
-Release:        %mkrel 3
+Version:        1.9.1
+Release:        %mkrel 3.1.1
 Epoch:          0
 License:        Apache License
 URL:            http://lucene.apache.org/
 Group:          Development/Java
-#Vendor:         JPackage Project
-#Distribution:   JPackage
-Source0:	http://www.apache.org/dist/lucene/java/archive/lucene-%{version}-src-MDVCLEAN.tar.bz2
-BuildRequires:  ant
+Source0:        http://www.apache.org/dist/lucene/java/lucene-1.9.1-src.tar.gz
+Source1:        lucene-1.9-OSGi-MANIFEST.MF
+Source2:        lucene-1.9-analysis-OSGi-MANIFEST.MF
+Patch0:         lucene-1.9-common-build_xml.patch
+Patch1:         lucene-1.9-contrib-db-bdb-build_xml.patch
+Patch2:         lucene-1.9-contrib-db-bdb-je-build_xml.patch
+BuildRequires:  jpackage-utils >= 0:1.6
+BuildRequires:  ant >= 0:1.6
+BuildRequires:  ant-junit >= 0:1.6
+#BuildRequires:  berkeleydb
+#BuildRequires:  berkeleydb-native >= 0:4.3.29
+BuildRequires:  junit
 BuildRequires:  javacc
-BuildRequires:  java-devel
 BuildRequires:  java-javadoc
-BuildRequires:  jpackage-utils
-BuildRequires:  zip
-%if !%{gcj_support}
-BuildArch:      noarch
-%else
-BuildRequires:	java-1.4.2-gcj-compat-devel
-Requires(post):	java-1.4.2-gcj-compat
-Requires(postun): java-1.4.2-gcj-compat
+BuildRequires:  jline
+BuildRequires:  jtidy
+BuildRequires:  regexp
+# previously used by eclipse but no longer needed
+Obsoletes:      lucene-devel < %{epoch}:%{version}
+Obsoletes:      lucene-src < %{epoch}:%{version}
+%if %{gcj_support}
+BuildRequires:        java-gcj-compat-devel >= 1.0.43
+Requires(post): java-1.5.0-gcj
+Requires(postun): java-1.5.0-gcj
 %endif
-
+%if %{gcj_support}
+%else
+BuildArch:        noarch
+%endif
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
 %description
@@ -43,114 +80,171 @@ Summary:        Javadoc for Lucene
 Group:          Development/Java
 
 %description javadoc
-Javadoc for Lucene.
+%{summary}.
 
 %package demo
-Summary:        Lucene demonstrations and samples
+Summary:        Lucene demonstration library
 Group:          Development/Java
 Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %description demo
-Lucene demonstrations and samples.
+%{summary}.
 
-# TODO: webapp
-
-%package src
-Summary:        Source for Lucene
+%package contrib
+Summary:        Lucene contributed extensions
 Group:          Development/Java
+Requires:       %{name} = %{epoch}:%{version}-%{release}
 
-%description src
-Source for Lucene.
+%description contrib
+%{summary}.
+
+#%package contrib-db
+#Summary:        Lucene contributed bdb extensions
+#Group:          Development/Java
+#Requires:       %{name} = %{epoch}:%{version}-%{release}
+#Requires:  berkeleydb
+#Requires:  berkeleydb-native >= 0:4.3.29
+
+#%description contrib-db
+#%{summary}.
+
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{version}
+# remove all binary libs
+find . -name "*.jar" -exec rm -f {} \;
+
+%patch0 -b .sav
+#%patch1 -b .sav
+#%patch2 -b .sav
 
 %build
 mkdir -p docs
-export CLASSPATH=
-export OPT_JAR_LIST=
-%ant \
+mkdir -p lib
+export OPT_JAR_LIST="ant/ant-junit junit"
+export CLASSPATH=$(build-classpath jline jtidy regexp)
+#pushd contrib/db/bdb/lib
+#ln -sf $(build-classpath berkeleydb-native) .
+#popd
+#pushd contrib/db/bdb-je/lib
+#ln -sf $(build-classpath berkeleydb) .
+#popd
+rm -r contrib/db
+%{ant} -Dbuild.sysclasspath=first \
   -Djavacc.home=%{_bindir}/javacc \
   -Djavacc.jar=%{_javadir}/javacc.jar \
   -Djavacc.jar.dir=%{_javadir} \
   -Djavadoc.link=%{_javadocdir}/java \
-  jar-core jar-demo javadocs
+  package test
+#  package test generate-test-reports
+
+mkdir META-INF
+cp %{SOURCE1} META-INF/MANIFEST.MF
+DATE=$(date +%D)
+sed --in-place "s|@DATE@|$DATE|" META-INF/MANIFEST.MF
+zip -u build/lucene-core-%{version}.jar META-INF/MANIFEST.MF
+cp %{SOURCE2} META-INF/MANIFEST.MF
+sed --in-place "s|@DATE@|$DATE|" META-INF/MANIFEST.MF
+zip -u build/contrib/analyzers/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
 # jars
-mkdir -p $RPM_BUILD_ROOT%{_javadir}
-cp -p build/%{name}-core-%{nversion}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-core-%{version}.jar
+install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}
+install -m 0644 build/%{name}-core-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-%{version}.jar
+install -m 0644 build/%{name}-demos-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-demos-%{version}.jar
 (cd $RPM_BUILD_ROOT%{_javadir} && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
-(cd $RPM_BUILD_ROOT%{_javadir} && ln -sf %{name}-core.jar %{name}.jar && ln -sf %{name}-core-%{version}.jar %{name}-%{version}.jar)
+
+# contrib jars
+install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
+for c in analyzers ant highlighter lucli memory misc queries similarity snowball spellchecker surround swing wordnet xml-query-parser; do
+    install -m 0644 build/contrib/$c/%{name}-${c}-%{version}.jar \
+                $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
+done
+(cd $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
+
+# bdb contrib jars
+#install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#install -m 0644 build/contrib/db/bdb/%{name}-bdb-%{version}.jar \
+#                $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#install -m 0644 build/contrib/db/bdb-je/%{name}-bdb-je-%{version}.jar \
+#                $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#(cd $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
 
 # javadoc
-mkdir -p $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
+install -d -m 0755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 cp -pr build/docs/api/* \
   $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 ln -s %{name}-%{version} $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 
-# demo
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/%{name}
-
-cp -p build/%{name}-demos-%{nversion}.jar \
-  $RPM_BUILD_ROOT%{_datadir}/%{name}/%{name}-demos-%{version}.jar
-ln -s %{name}-demos-%{version}.jar $RPM_BUILD_ROOT%{_datadir}/%{name}/%{name}-demos.jar
-
-# TODO: webapp: luceneweb.war / where do we install 'em?
-
-# src
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/%{name}
-
-%{__tar} xOf %{SOURCE0} | zip -r $RPM_BUILD_ROOT%{_datadir}/%{name}/%{name}-%{version}-src.zip -
-ln -s %{name}-%{version}-src.zip $RPM_BUILD_ROOT%{_datadir}/%{name}/%{name}-src.zip
+# webapp
+install -d -m 0755 $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
+install -m 0644 build/%{name}web.war \
+  $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
 
 %if %{gcj_support}
-%{_bindir}/aot-compile-rpm
+%{_bindir}/aot-compile-rpm --exclude %{_datadir}/%{name}-%{version}/luceneweb.war
 %endif
-
-%post javadoc
-rm -f %{_javadocdir}/%{name}
-ln -s %{name}-%{version} %{_javadocdir}/%{name}
-
-%if %{gcj_support}
-%post
-%{_bindir}/rebuild-gcj-db
-
-%postun
-%{_bindir}/rebuild-gcj-db
-%endif
-
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
+%if %{gcj_support}
+%post
+%{update_gcjdb}
+
+%postun
+%{clean_gcjdb}
+%endif
 
 %files
 %defattr(0644,root,root,0755)
 %doc CHANGES.txt LICENSE.txt README.txt
-%{_javadir}/*
+%{_javadir}/%{name}-%{version}.jar
+%{_javadir}/%{name}.jar
+%{_datadir}/%{name}-%{version}
 %if %{gcj_support}
-%attr(-,root,root) %{_libdir}/gcj/%{name}
+%dir %{_libdir}/gcj/%{name}
+%attr(-,root,root) %{_libdir}/gcj/%{name}/%{name}-%{version}.jar.*
 %endif
 
 %files javadoc
 %defattr(0644,root,root,0755)
 %{_javadocdir}/%{name}-%{version}
-%ghost %{_javadocdir}/%{name}
+%{_javadocdir}/%{name}
+
+%files contrib
+%defattr(0644,root,root,0755)
+%{_javadir}/%{name}-contrib
+%if %{gcj_support}
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-analyzers-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-ant-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-highlighter-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-lucli-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-memory-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-misc-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-queries-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-snowball-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-spellchecker-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-surround-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-swing-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-wordnet-%{version}.jar.*
+%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-xml-query-parser-%{version}.jar.*
+%endif
+
+#%files contrib-db
+#%defattr(0644,root,root,0755)
+#%{_javadir}/%{name}-contrib-db
+#%if %{gcj_support}
+#%{_libdir}/gcj/%{name}/lucene-bdb-%{version}.jar.*
+#%{_libdir}/gcj/%{name}/lucene-bdb-je-%{version}.jar.*
+#%endif
 
 %files demo
 %defattr(0644,root,root,0755)
-%dir %{_datadir}/%{name}
-%exclude %{_datadir}/%{name}/*.zip
-%{_datadir}/%{name}/*
-
-# TODO: webapp
-
-%files src
-%defattr(0644,root,root,0755)
-%dir %{_datadir}/%{name}
-%{_datadir}/%{name}/*.zip
-
-
+%{_javadir}/%{name}-demos-%{version}.jar
+%{_javadir}/%{name}-demos.jar
+%if %{gcj_support}
+%attr(-,root,root) %{_libdir}/gcj/%{name}/%{name}-demos-%{version}.jar.*
+%endif
