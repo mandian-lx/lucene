@@ -34,7 +34,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
 Version:        1.9.1
-Release:        %mkrel 3.1.1
+Release:        %mkrel 3.1.2
 Epoch:          0
 License:        Apache License
 URL:            http://lucene.apache.org/
@@ -135,8 +135,7 @@ rm -r contrib/db
   -Djavacc.jar=%{_javadir}/javacc.jar \
   -Djavacc.jar.dir=%{_javadir} \
   -Djavadoc.link=%{_javadocdir}/java \
-  package test
-#  package test generate-test-reports
+  package # test generate-test-reports
 
 mkdir META-INF
 cp %{SOURCE1} META-INF/MANIFEST.MF
