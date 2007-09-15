@@ -34,7 +34,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
 Version:        1.9.1
-Release:        %mkrel 3.1.2
+Release:        %mkrel 3.1.3
 Epoch:          0
 License:        Apache License
 URL:            http://lucene.apache.org/
