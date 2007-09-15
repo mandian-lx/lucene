@@ -61,10 +61,6 @@ Obsoletes:      lucene-devel < %{epoch}:%{version}
 Obsoletes:      lucene-src < %{epoch}:%{version}
 %if %{gcj_support}
 BuildRequires:        java-gcj-compat-devel >= 1.0.43
-Requires(post): java-1.5.0-gcj
-Requires(postun): java-1.5.0-gcj
-%endif
-%if %{gcj_support}
 %else
 BuildArch:        noarch
 %endif
