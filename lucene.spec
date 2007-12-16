@@ -34,7 +34,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
 Version:        1.9.1
-Release:        %mkrel 3.1.3
+Release:        %mkrel 3.1.4
 Epoch:          0
 License:        Apache License
 URL:            http://lucene.apache.org/
@@ -45,7 +45,7 @@ Source2:        lucene-1.9-analysis-OSGi-MANIFEST.MF
 Patch0:         lucene-1.9-common-build_xml.patch
 Patch1:         lucene-1.9-contrib-db-bdb-build_xml.patch
 Patch2:         lucene-1.9-contrib-db-bdb-je-build_xml.patch
-BuildRequires:  jpackage-utils >= 0:1.6
+BuildRequires:  java-rpmbuild >= 0:1.6
 BuildRequires:  ant >= 0:1.6
 BuildRequires:  ant-junit >= 0:1.6
 #BuildRequires:  berkeleydb
