@@ -56,6 +56,7 @@ BuildRequires:  java-javadoc
 BuildRequires:  jline
 BuildRequires:  jtidy
 BuildRequires:  regexp
+BuildRequires:  zip
 # previously used by eclipse but no longer needed
 Obsoletes:      lucene-devel < %{epoch}:%{version}
 Obsoletes:      lucene-src < %{epoch}:%{version}
