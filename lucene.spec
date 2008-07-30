@@ -50,6 +50,7 @@ BuildRequires:  javacc
 BuildRequires:  java-javadoc
 BuildRequires:  java-rpmbuild
 BuildRequires:  junit
+BuildRequires:  jtidy
 BuildRequires:  zip
 Provides:       lucene-core = %{epoch}:%{version}-%{release}
 # previously used by eclipse but no longer needed
