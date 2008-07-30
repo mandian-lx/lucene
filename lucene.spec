@@ -49,6 +49,7 @@ BuildRequires:  ant-nodeps
 BuildRequires:  javacc
 BuildRequires:  java-javadoc
 BuildRequires:  java-rpmbuild
+BuildRequires:  junit
 BuildRequires:  zip
 Provides:       lucene-core = %{epoch}:%{version}-%{release}
 # previously used by eclipse but no longer needed
