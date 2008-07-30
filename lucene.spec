@@ -53,6 +53,7 @@ BuildRequires:  junit
 BuildRequires:  jtidy
 BuildRequires:  jakarta-commons-digester
 BuildRequires:  jline
+BuildRequires:  regexp
 BuildRequires:  zip
 Provides:       lucene-core = %{epoch}:%{version}-%{release}
 # previously used by eclipse but no longer needed
