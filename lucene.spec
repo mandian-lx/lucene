@@ -1,4 +1,4 @@
-# Copyright (c) 2000-2005, JPackate Project
+# Copyright (c) 2000-2005, JPackage Project
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,44 +28,39 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-%define section         devel
-%define gcj_support         1
+%define section         free
+%define nversion        2.3
+%define gcj_support     0
 
-Summary:        High-performance, full-featured text search engine
 Name:           lucene
-Version:        1.9.1
-Release:        %mkrel 3.1.5
+Version:        2.3.2
+Release:        %mkrel 0.0.1
 Epoch:          0
+Summary:        High-performance, full-featured text search engine
 License:        Apache License
 URL:            http://lucene.apache.org/
 Group:          Development/Java
-Source0:        http://www.apache.org/dist/lucene/java/lucene-1.9.1-src.tar.gz
-Source1:        lucene-1.9-OSGi-MANIFEST.MF
-Source2:        lucene-1.9-analysis-OSGi-MANIFEST.MF
-Patch0:         lucene-1.9-common-build_xml.patch
-Patch1:         lucene-1.9-contrib-db-bdb-build_xml.patch
-Patch2:         lucene-1.9-contrib-db-bdb-je-build_xml.patch
-BuildRequires:  java-rpmbuild >= 0:1.6
-BuildRequires:  ant >= 0:1.6
-BuildRequires:  ant-junit >= 0:1.6
-#BuildRequires:  berkeleydb
-#BuildRequires:  berkeleydb-native >= 0:4.3.29
-BuildRequires:  junit
+Source0:        http://www.apache.org/dist/lucene/java/%{name}-%{version}-src.tar.gz
+Source1:	lucene-1.9-OSGi-MANIFEST.MF
+Source2:	lucene-1.9-analysis-OSGi-MANIFEST.MF
+Patch4:         lucene-2.3.0-db-javadoc.patch
+BuildRequires:  ant
+BuildRequires:  ant-nodeps
 BuildRequires:  javacc
 BuildRequires:  java-javadoc
-BuildRequires:  jline
-BuildRequires:  jtidy
-BuildRequires:  regexp
+BuildRequires:  java-rpmbuild
 BuildRequires:  zip
+Provides:       lucene-core = %{epoch}:%{version}-%{release}
 # previously used by eclipse but no longer needed
-Obsoletes:      lucene-devel < %{epoch}:%{version}
-Obsoletes:      lucene-src < %{epoch}:%{version}
-%if %{gcj_support}
-BuildRequires:        java-gcj-compat-devel >= 1.0.43
+Obsoletes:      lucene-devel < %{version}
+%if !%{gcj_support}
+BuildRequires:  java-devel
+BuildArch:      noarch
 %else
-BuildArch:        noarch
+BuildRequires:  java-gcj-compat-devel
 %endif
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root
 
 %description
 Jakarta Lucene is a high-performance, full-featured text search engine
@@ -77,10 +72,10 @@ Summary:        Javadoc for Lucene
 Group:          Development/Java
 
 %description javadoc
-%{summary}.
+Javadoc for Lucene.
 
 %package demo
-Summary:        Lucene demonstration library
+Summary:        Lucene demonstrations and samples
 Group:          Development/Java
 Requires:       %{name} = %{epoch}:%{version}-%{release}
 
@@ -89,7 +84,7 @@ Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %package contrib
 Summary:        Lucene contributed extensions
-Group:          Development/Java
+Group:          Internet/WWW/Indexing/Search
 Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %description contrib
@@ -97,7 +92,7 @@ Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 #%package contrib-db
 #Summary:        Lucene contributed bdb extensions
-#Group:          Development/Java
+#Group:          Internet/WWW/Indexing/Search
 #Requires:       %{name} = %{epoch}:%{version}-%{release}
 #Requires:  berkeleydb
 #Requires:  berkeleydb-native >= 0:4.3.29
@@ -105,21 +100,17 @@ Requires:       %{name} = %{epoch}:%{version}-%{release}
 #%description contrib-db
 #%{summary}.
 
-
 %prep
 %setup -q -n %{name}-%{version}
-# remove all binary libs
-find . -name "*.jar" -exec rm -f {} \;
+%remove_java_binaries
 
-%patch0 -b .sav
-#%patch1 -b .sav
-#%patch2 -b .sav
+%patch4 -p1 -b .db-javadoc
 
 %build
 mkdir -p docs
 mkdir -p lib
 export OPT_JAR_LIST="ant/ant-junit junit"
-export CLASSPATH=$(build-classpath jline jtidy regexp)
+export CLASSPATH=$(build-classpath jline jtidy regexp commons-digester)
 #pushd contrib/db/bdb/lib
 #ln -sf $(build-classpath berkeleydb-native) .
 #popd
@@ -127,26 +118,33 @@ export CLASSPATH=$(build-classpath jline jtidy regexp)
 #ln -sf $(build-classpath berkeleydb) .
 #popd
 rm -r contrib/db
-%{ant} -Dbuild.sysclasspath=first \
+
+#FIXME: Tests freeze randomly. Turning on debug messages shows warnings like:
+
+# [junit] GC Warning: Repeated allocation of very large block (appr. size 512000):
+# [junit] 	May lead to memory leak and poor performance.
+
+# See: http://koji.fedoraproject.org/koji/getfile?taskID=169839&name=build.log
+# for an example
+
+%ant -Dbuild.sysclasspath=first \
   -Djavacc.home=%{_bindir}/javacc \
   -Djavacc.jar=%{_javadir}/javacc.jar \
   -Djavacc.jar.dir=%{_javadir} \
   -Djavadoc.link=%{_javadocdir}/java \
-  package # test generate-test-reports
+  -Dversion=%{version} \
+  package
+#  package test generate-test-reports
 
 mkdir META-INF
 cp %{SOURCE1} META-INF/MANIFEST.MF
-DATE=$(date +%D)
-sed --in-place "s|@DATE@|$DATE|" META-INF/MANIFEST.MF
 zip -u build/lucene-core-%{version}.jar META-INF/MANIFEST.MF
 cp %{SOURCE2} META-INF/MANIFEST.MF
-sed --in-place "s|@DATE@|$DATE|" META-INF/MANIFEST.MF
 zip -u build/contrib/analyzers/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
 
 %install
-rm -rf $RPM_BUILD_ROOT
+%{__rm} -rf %{buildroot}
 
-# jars
 install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}
 install -m 0644 build/%{name}-core-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-%{version}.jar
 install -m 0644 build/%{name}-demos-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-demos-%{version}.jar
@@ -156,16 +154,16 @@ install -m 0644 build/%{name}-demos-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{
 install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
 for c in analyzers ant highlighter lucli memory misc queries similarity snowball spellchecker surround swing wordnet xml-query-parser; do
     install -m 0644 build/contrib/$c/%{name}-${c}-%{version}.jar \
-                $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
+		$RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
 done
 (cd $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
 
 # bdb contrib jars
 #install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
 #install -m 0644 build/contrib/db/bdb/%{name}-bdb-%{version}.jar \
-#                $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#		$RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
 #install -m 0644 build/contrib/db/bdb-je/%{name}-bdb-je-%{version}.jar \
-#                $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#		$RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
 #(cd $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
 
 # javadoc
@@ -179,12 +177,10 @@ install -d -m 0755 $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
 install -m 0644 build/%{name}web.war \
   $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
 
-%if %{gcj_support}
-%{_bindir}/aot-compile-rpm --exclude %{_datadir}/%{name}-%{version}/luceneweb.war
-%endif
+%{gcj_compile}
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+%{__rm} -rf %{buildroot}
 
 %if %{gcj_support}
 %post
@@ -202,37 +198,37 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/%{name}-%{version}
 %if %{gcj_support}
 %dir %{_libdir}/gcj/%{name}
-%attr(-,root,root) %{_libdir}/gcj/%{name}/%{name}-%{version}.jar.*
+%{_libdir}/gcj/%{name}/%{name}-%{version}.jar.*
 %endif
 
 %files javadoc
 %defattr(0644,root,root,0755)
 %{_javadocdir}/%{name}-%{version}
-%{_javadocdir}/%{name}
+%ghost %{_javadocdir}/%{name}
 
 %files contrib
 %defattr(0644,root,root,0755)
 %{_javadir}/%{name}-contrib
 %if %{gcj_support}
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-analyzers-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-ant-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-highlighter-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-lucli-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-memory-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-misc-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-queries-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-snowball-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-spellchecker-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-surround-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-swing-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-wordnet-%{version}.jar.*
-%attr(-,root,root) %{_libdir}/gcj/%{name}/lucene-xml-query-parser-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-analyzers-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-ant-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-highlighter-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-lucli-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-memory-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-misc-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-queries-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-snowball-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-spellchecker-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-surround-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-swing-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-wordnet-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-xml-query-parser-%{version}.jar.*
 %endif
 
 #%files contrib-db
 #%defattr(0644,root,root,0755)
 #%{_javadir}/%{name}-contrib-db
-#%if %{gcj_support}
+#%if %{with_gcj}
 #%{_libdir}/gcj/%{name}/lucene-bdb-%{version}.jar.*
 #%{_libdir}/gcj/%{name}/lucene-bdb-je-%{version}.jar.*
 #%endif
@@ -242,5 +238,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_javadir}/%{name}-demos-%{version}.jar
 %{_javadir}/%{name}-demos.jar
 %if %{gcj_support}
-%attr(-,root,root) %{_libdir}/gcj/%{name}/%{name}-demos-%{version}.jar.*
+%{_libdir}/gcj/%{name}/%{name}-demos-%{version}.jar.*
 %endif
