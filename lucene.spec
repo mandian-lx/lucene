@@ -89,7 +89,7 @@ Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %package contrib
 Summary:        Lucene contributed extensions
-Group:          Internet/WWW/Indexing/Search
+Group:          Development/Java
 Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %description contrib
