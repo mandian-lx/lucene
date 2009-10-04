@@ -109,7 +109,7 @@ Requires:       %{name} = %{epoch}:%{version}-%{release}
 %setup -q -n %{name}-%{version}
 %remove_java_binaries
 
-%patch4 -p1 -b .db-javadoc
+%patch4 -p0 -b .db-javadoc
 
 %build
 mkdir -p docs
