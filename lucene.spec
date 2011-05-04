@@ -34,7 +34,7 @@
 
 Name:           lucene
 Version:        2.4.0
-Release:        %mkrel 0.0.3
+Release:        %mkrel 0.0.4
 Epoch:          0
 Summary:        High-performance, full-featured text search engine
 License:        Apache License
