@@ -31,13 +31,14 @@
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
 Version:        2.9.4
-Release:        4
+Release:        6
+Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
 Group:          Development/Java
 Source0:        http://archive.apache.org/dist/lucene/java/%{name}-%{version}-src.tar.gz
-Source1:        lucene-1.9-OSGi-MANIFEST.MF
-Source2:        lucene-1.9-analysis-OSGi-MANIFEST.MF
+Source1:        lucene-%{version}-core-OSGi-MANIFEST.MF
+Source2:        lucene-%{version}-analysis-OSGi-MANIFEST.MF
 Patch1:         0001-Remove-bdb-packageset.patch
 Patch2:         0002-Fix-version-string.patch
 Patch3:         0003-Remove-classpath.patch
@@ -52,6 +53,7 @@ BuildRequires:  jtidy
 BuildRequires:  regexp
 BuildRequires:  apache-commons-digester
 BuildRequires:  unzip
+BuildRequires:  zip
 BuildRequires:  java-devel >= 0:1.6.0
 BuildRequires:  apache-commons-compress
 BuildRequires:  icu4j
@@ -123,8 +125,8 @@ ant -Dbuild.sysclasspath=first \
   -Djavacc.jar.dir=%{_javadir} \
   -Djavadoc.link=%{_javadocdir}/java \
   -Dversion=%{version} \
-  package test-core test-contrib
-
+  package 
+        
 # add missing OSGi metadata to manifests
 mkdir META-INF
 unzip -o build/lucene-core-%{version}.jar META-INF/MANIFEST.MF
@@ -191,7 +193,6 @@ rm -rf $(readlink -f %{_javadocdir}/%{name}) %{_javadocdir}/%{name} || :
 
 
 %files
-%defattr(-,root,root,-)
 %doc CHANGES.txt LICENSE.txt README.txt NOTICE.txt
 %{_mavenpomdir}/JPP*pom
 %{_mavendepmapfragdir}/%{name}
@@ -200,16 +201,13 @@ rm -rf $(readlink -f %{_javadocdir}/%{name}) %{_javadocdir}/%{name} || :
 %{_datadir}/%{name}-%{version}
 
 %files javadoc
-%defattr(-,root,root,-)
 %doc LICENSE.txt
 %{_javadocdir}/%{name}
 
 %files contrib
-%defattr(-,root,root,-)
 %{_javadir}/%{name}-contrib
 %doc contrib/CHANGES.txt
 
 %files demo
-%defattr(-,root,root,-)
 %{_javadir}/%{name}-demos.jar
 
