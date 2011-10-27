@@ -31,7 +31,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
 Version:        2.9.4
-Release:        6
+Release:        7
 Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
