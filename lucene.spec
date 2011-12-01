@@ -143,42 +143,42 @@ cp build/contrib/analyzers/common/lucene-analyzers-%{version}.jar build/contrib/
 %install
 
 # jars
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}
-install -d -m 0755 $RPM_BUILD_ROOT%{_mavenpomdir}
-install -m 0644 build/%{name}-core-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}.jar
-ln -sf %{name}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-core.jar
-install -m 0644 build/%{name}-demos-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-demos.jar
+install -d -m 0755 %{buildroot}%{_javadir}
+install -d -m 0755 %{buildroot}%{_mavenpomdir}
+install -m 0644 build/%{name}-core-%{version}.jar %{buildroot}%{_javadir}/%{name}.jar
+ln -sf %{name}.jar %{buildroot}%{_javadir}/%{name}-core.jar
+install -m 0644 build/%{name}-demos-%{version}.jar %{buildroot}%{_javadir}/%{name}-demos.jar
 
 # contrib jars
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
+install -d -m 0755 %{buildroot}%{_javadir}/%{name}-contrib
 for c in analyzers ant benchmark collation fast-vector-highlighter highlighter \
          instantiated lucli memory misc queries queryparser regex remote \
          snowball spatial spellchecker surround swing wikipedia wordnet \
          xml-query-parser; do
     install -m 0644 build/contrib/$c/%{name}-${c}-%{version}.jar \
-        $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib/%{name}-${c}.jar
+        %{buildroot}%{_javadir}/%{name}-contrib/%{name}-${c}.jar
 
     install -m 0644 contrib/$c/pom.xml.template \
-               $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
+               %{buildroot}/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
     %add_to_maven_depmap org.apache.lucene lucene-$c %{version} JPP/lucene-contrib lucene-$c
 done
 
 # main poms
 for pom in contrib core demos parent; do
     install -m 0644 lucene-$pom-pom.xml.template \
-           $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-$pom.pom
+           %{buildroot}/%{_mavenpomdir}/JPP-lucene-$pom.pom
     %add_to_maven_depmap org.apache.lucene lucene-$pom %{version} JPP lucene-$pom
 done
 
 # javadoc
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}
+install -d -m 0755 %{buildroot}%{_javadocdir}/%{name}
 cp -pr build/docs/api/* \
-  $RPM_BUILD_ROOT%{_javadocdir}/%{name}
+  %{buildroot}%{_javadocdir}/%{name}
 
 # webapp
-install -d -m 0755 $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
+install -d -m 0755 %{buildroot}%{_datadir}/%{name}-%{version}
 install -m 0644 build/%{name}web.war \
-  $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
+  %{buildroot}%{_datadir}/%{name}-%{version}
 
 %pre javadoc
 # workaround for rpm bug, can be removed in F-17
