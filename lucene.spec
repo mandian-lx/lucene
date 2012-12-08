@@ -28,63 +28,61 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-Summary:        High-performance, full-featured text search engine
+%define section         free
+%define nversion        2.3
+%define gcj_support     0
+
 Name:           lucene
-Version:        2.9.4
-Release:        9
+Version:        2.4.0
+Release:        %mkrel 0.0.3
 Epoch:          0
-License:        ASL 2.0
+Summary:        High-performance, full-featured text search engine
+License:        Apache License
 URL:            http://lucene.apache.org/
 Group:          Development/Java
-Source0:        http://archive.apache.org/dist/lucene/java/%{name}-%{version}-src.tar.gz
-Source1:        lucene-%{version}-core-OSGi-MANIFEST.MF
-Source2:        lucene-%{version}-analysis-OSGi-MANIFEST.MF
-Patch1:         0001-Remove-bdb-packageset.patch
-Patch2:         0002-Fix-version-string.patch
-Patch3:         0003-Remove-classpath.patch
-BuildRequires:  jpackage-utils >= 0:1.6
-BuildRequires:  ant >= 0:1.6
-BuildRequires:  ant-junit >= 0:1.6
-BuildRequires:  junit
+Source0:        http://www.apache.org/dist/lucene/java/%{name}-%{version}-src.tar.gz
+Source1:	lucene-1.9-OSGi-MANIFEST.MF
+Source2:	lucene-1.9-analysis-OSGi-MANIFEST.MF
+Patch4:         lucene-2.3.0-db-javadoc.patch
+BuildRequires:  ant
+BuildRequires:  ant-nodeps
 BuildRequires:  javacc
 BuildRequires:  java-javadoc
-BuildRequires:  jline
+BuildRequires:  java-rpmbuild
+BuildRequires:  junit
 BuildRequires:  jtidy
+BuildRequires:  jakarta-commons-digester
+BuildRequires:  jline
 BuildRequires:  regexp
-BuildRequires:  apache-commons-digester
-BuildRequires:  unzip
 BuildRequires:  zip
-BuildRequires:  java-devel >= 0:1.6.0
-BuildRequires:  apache-commons-compress
-BuildRequires:  icu4j
-# for tests
-BuildRequires:  subversion
-
-Provides:       lucene-core = %{version}-%{release}
+Provides:       lucene-core = %{epoch}:%{version}-%{release}
 # previously used by eclipse but no longer needed
 Obsoletes:      lucene-devel < %{version}
+%if !%{gcj_support}
+BuildRequires:  java-devel
 BuildArch:      noarch
+%else
+BuildRequires:  java-gcj-compat-devel
+%endif
 
-Requires:       jpackage-utils
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root
 
 %description
-Apache Lucene is a high-performance, full-featured text search
-engine library written entirely in Java. It is a technology suitable
-for nearly any application that requires full-text search, especially
-cross-platform.
+Jakarta Lucene is a high-performance, full-featured text search engine
+written entirely in Java. It is a technology suitable for nearly any
+application that requires full-text search, especially cross-platform.
 
 %package javadoc
 Summary:        Javadoc for Lucene
 Group:          Development/Java
-Requires:       jpackage-utils
 
 %description javadoc
-%{summary}.
+Javadoc for Lucene.
 
 %package demo
-Summary:        Lucene demonstration library
+Summary:        Lucene demonstrations and samples
 Group:          Development/Java
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %description demo
 %{summary}.
@@ -92,122 +90,266 @@ Requires:       %{name} = %{version}-%{release}
 %package contrib
 Summary:        Lucene contributed extensions
 Group:          Development/Java
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name} = %{epoch}:%{version}-%{release}
 
 %description contrib
 %{summary}.
 
+#%package contrib-db
+#Summary:        Lucene contributed bdb extensions
+#Group:          Internet/WWW/Indexing/Search
+#Requires:       %{name} = %{epoch}:%{version}-%{release}
+#Requires:  berkeleydb
+#Requires:  berkeleydb-native >= 0:4.3.29
+
+#%description contrib-db
+#%{summary}.
+
 %prep
 %setup -q -n %{name}-%{version}
-# remove all binary libs
-find . -name "*.jar" -exec rm -f {} \;
+%remove_java_binaries
 
-%patch1 -p1 -b .db-javadoc
-%patch2 -p1 -b .fixmanifests
-%patch3 -p1 -b .removeclasspath
-
-iconv --from=ISO-8859-1 --to=UTF-8 CHANGES.txt > CHANGES.txt.new
-
-# prepare pom files (replace @version@ with real version)
-find contrib -iname '*.pom.xml.template' -exec \
-             sed -i "s:@version@:%{version}:g" \{\} \;
+%patch4 -p0 -b .db-javadoc
 
 %build
 mkdir -p docs
 mkdir -p lib
 export OPT_JAR_LIST="ant/ant-junit junit"
-export CLASSPATH=$(build-classpath jline jtidy regexp commons-digester apache-commons-compress icu4j)
+export CLASSPATH=$(build-classpath jline jtidy regexp commons-digester)
+#pushd contrib/db/bdb/lib
+#ln -sf $(build-classpath berkeleydb-native) .
+#popd
+#pushd contrib/db/bdb-je/lib
+#ln -sf $(build-classpath berkeleydb) .
+#popd
 rm -r contrib/db
 
-ant -Dbuild.sysclasspath=first \
+#FIXME: Tests freeze randomly. Turning on debug messages shows warnings like:
+
+# [junit] GC Warning: Repeated allocation of very large block (appr. size 512000):
+# [junit] 	May lead to memory leak and poor performance.
+
+# See: http://koji.fedoraproject.org/koji/getfile?taskID=169839&name=build.log
+# for an example
+
+%ant -Dbuild.sysclasspath=first \
   -Djavacc.home=%{_bindir}/javacc \
   -Djavacc.jar=%{_javadir}/javacc.jar \
   -Djavacc.jar.dir=%{_javadir} \
   -Djavadoc.link=%{_javadocdir}/java \
   -Dversion=%{version} \
-  package 
-        
-# add missing OSGi metadata to manifests
+  package
+#  package test generate-test-reports
+
 mkdir META-INF
-unzip -o build/lucene-core-%{version}.jar META-INF/MANIFEST.MF
-cat %{SOURCE1} >> META-INF/MANIFEST.MF
-sed -i '/^\r$/d' META-INF/MANIFEST.MF
+cp %{SOURCE1} META-INF/MANIFEST.MF
 zip -u build/lucene-core-%{version}.jar META-INF/MANIFEST.MF
-unzip -o build/contrib/analyzers/common/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
-cat %{SOURCE2} >> META-INF/MANIFEST.MF
-sed -i '/^\r$/d' META-INF/MANIFEST.MF
-zip -u build/contrib/analyzers/common/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
-cp contrib/analyzers/common/pom.xml.template contrib/analyzers/
-cp build/contrib/analyzers/common/lucene-analyzers-%{version}.jar build/contrib/analyzers/
+cp %{SOURCE2} META-INF/MANIFEST.MF
+zip -u build/contrib/analyzers/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
 
 %install
+%{__rm} -rf %{buildroot}
 
-# jars
-install -d -m 0755 %{buildroot}%{_javadir}
-install -d -m 0755 %{buildroot}%{_mavenpomdir}
-install -m 0644 build/%{name}-core-%{version}.jar %{buildroot}%{_javadir}/%{name}.jar
-ln -sf %{name}.jar %{buildroot}%{_javadir}/%{name}-core.jar
-install -m 0644 build/%{name}-demos-%{version}.jar %{buildroot}%{_javadir}/%{name}-demos.jar
+install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}
+install -m 0644 build/%{name}-core-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-%{version}.jar
+install -m 0644 build/%{name}-demos-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-demos-%{version}.jar
+(cd $RPM_BUILD_ROOT%{_javadir} && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
 
 # contrib jars
-install -d -m 0755 %{buildroot}%{_javadir}/%{name}-contrib
-for c in analyzers ant benchmark collation fast-vector-highlighter highlighter \
-         instantiated lucli memory misc queries queryparser regex remote \
-         snowball spatial spellchecker surround swing wikipedia wordnet \
-         xml-query-parser; do
+install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
+for c in analyzers ant highlighter lucli memory misc queries similarity snowball spellchecker surround swing wordnet xml-query-parser; do
     install -m 0644 build/contrib/$c/%{name}-${c}-%{version}.jar \
-        %{buildroot}%{_javadir}/%{name}-contrib/%{name}-${c}.jar
-
-    install -m 0644 contrib/$c/pom.xml.template \
-               %{buildroot}/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
-    %add_to_maven_depmap org.apache.lucene lucene-$c %{version} JPP/lucene-contrib lucene-$c
+		$RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
 done
+(cd $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
 
-# main poms
-for pom in contrib core demos parent; do
-    install -m 0644 lucene-$pom-pom.xml.template \
-           %{buildroot}/%{_mavenpomdir}/JPP-lucene-$pom.pom
-    %add_to_maven_depmap org.apache.lucene lucene-$pom %{version} JPP lucene-$pom
-done
+# bdb contrib jars
+#install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#install -m 0644 build/contrib/db/bdb/%{name}-bdb-%{version}.jar \
+#		$RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#install -m 0644 build/contrib/db/bdb-je/%{name}-bdb-je-%{version}.jar \
+#		$RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db
+#(cd $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib-db && for jar in *-%{version}.jar; do ln -sf ${jar} `echo $jar| sed "s|-%{version}||g"`; done)
 
 # javadoc
-install -d -m 0755 %{buildroot}%{_javadocdir}/%{name}
+install -d -m 0755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 cp -pr build/docs/api/* \
-  %{buildroot}%{_javadocdir}/%{name}
+  $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
+ln -s %{name}-%{version} $RPM_BUILD_ROOT%{_javadocdir}/%{name}
 
 # webapp
-install -d -m 0755 %{buildroot}%{_datadir}/%{name}-%{version}
+install -d -m 0755 $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
 install -m 0644 build/%{name}web.war \
-  %{buildroot}%{_datadir}/%{name}-%{version}
+  $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
 
-%pre javadoc
-# workaround for rpm bug, can be removed in F-17
-[ $1 -gt 1 ] && [ -L %{_javadocdir}/%{name} ] && \
-rm -rf $(readlink -f %{_javadocdir}/%{name}) %{_javadocdir}/%{name} || :
+%{gcj_compile}
 
+%clean
+%{__rm} -rf %{buildroot}
+
+%if %{gcj_support}
 %post
-%update_maven_depmap
+%{update_gcjdb}
 
 %postun
-%update_maven_depmap
-
+%{clean_gcjdb}
+%endif
 
 %files
-%doc CHANGES.txt LICENSE.txt README.txt NOTICE.txt
-%{_mavenpomdir}/JPP*pom
-%{_mavendepmapfragdir}/%{name}
+%defattr(0644,root,root,0755)
+%doc CHANGES.txt LICENSE.txt README.txt
+%{_javadir}/%{name}-%{version}.jar
 %{_javadir}/%{name}.jar
-%{_javadir}/%{name}-core.jar
 %{_datadir}/%{name}-%{version}
+%if %{gcj_support}
+%dir %{_libdir}/gcj/%{name}
+%{_libdir}/gcj/%{name}/%{name}-%{version}.jar.*
+%endif
 
 %files javadoc
-%doc LICENSE.txt
-%{_javadocdir}/%{name}
+%defattr(0644,root,root,0755)
+%{_javadocdir}/%{name}-%{version}
+%ghost %{_javadocdir}/%{name}
 
 %files contrib
+%defattr(0644,root,root,0755)
 %{_javadir}/%{name}-contrib
-%doc contrib/CHANGES.txt
+%if %{gcj_support}
+%{_libdir}/gcj/%{name}/lucene-analyzers-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-ant-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-highlighter-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-lucli-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-memory-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-misc-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-queries-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-snowball-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-spellchecker-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-surround-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-swing-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-wordnet-%{version}.jar.*
+%{_libdir}/gcj/%{name}/lucene-xml-query-parser-%{version}.jar.*
+%endif
+
+#%files contrib-db
+#%defattr(0644,root,root,0755)
+#%{_javadir}/%{name}-contrib-db
+#%if %{with_gcj}
+#%{_libdir}/gcj/%{name}/lucene-bdb-%{version}.jar.*
+#%{_libdir}/gcj/%{name}/lucene-bdb-je-%{version}.jar.*
+#%endif
 
 %files demo
+%defattr(0644,root,root,0755)
+%{_javadir}/%{name}-demos-%{version}.jar
 %{_javadir}/%{name}-demos.jar
+%if %{gcj_support}
+%{_libdir}/gcj/%{name}/%{name}-demos-%{version}.jar.*
+%endif
+
+
+%changelog
+* Fri Dec 03 2010 Oden Eriksson <oeriksson@mandriva.com> 0:2.4.0-0.0.3mdv2011.0
++ Revision: 606427
+- rebuild
+
+* Wed Mar 17 2010 Oden Eriksson <oeriksson@mandriva.com> 0:2.4.0-0.0.2mdv2010.1
++ Revision: 523214
+- rebuilt for 2010.1
+
+* Sun Oct 04 2009 Oden Eriksson <oeriksson@mandriva.com> 0:2.4.0-0.0.1mdv2010.0
++ Revision: 453398
+- rediffed one fuzzy patch
+
+* Mon Oct 20 2008 Alexander Kurtakov <akurtakov@mandriva.org> 0:2.4.0-0.0.1mdv2009.1
++ Revision: 295816
+- new version 2.4.0
+
+* Thu Jul 31 2008 Alexander Kurtakov <akurtakov@mandriva.org> 0:2.3.2-0.0.1mdv2009.0
++ Revision: 257242
+- fix group
+- BR regexp
+- BR jline
+- BR jakarta-commons-digester
+- BR jtidy
+- BR junit
+- new version 2.3.2
+
+* Tue Mar 04 2008 Alexander Kurtakov <akurtakov@mandriva.org> 0:1.9.1-3.1.5mdv2008.1
++ Revision: 179024
+- add zip BR
+
+  + Oden Eriksson <oeriksson@mandriva.com>
+    - rebuild
+
+  + Olivier Blin <oblin@mandriva.com>
+    - restore BuildRoot
+
+  + Thierry Vignaud <tv@mandriva.org>
+    - kill re-definition of %%buildroot on Pixel's request
+
+  + Anssi Hannula <anssi@mandriva.org>
+    - buildrequire java-rpmbuild, i.e. build with icedtea on x86(_64)
+
+* Sat Sep 15 2007 Anssi Hannula <anssi@mandriva.org> 0:1.9.1-3.1.3mdv2008.0
++ Revision: 87385
+- remove unnecessary Requires(post) on java-gcj-compat
+- rebuild to filter out autorequires of GCJ AOT objects
+
+* Fri Aug 24 2007 David Walluck <walluck@mandriva.org> 0:1.9.1-3.1.2mdv2008.0
++ Revision: 70774
+- fix build
+- fix OSGi manifests
+
+* Fri Jul 27 2007 David Walluck <walluck@mandriva.org> 0:1.9.1-3.1.1mdv2008.0
++ Revision: 56230
+- sync with FC8
+
+
+* Fri Mar 16 2007 Christiaan Welvaart <spturtle@mandriva.org> 1.9.1-3mdv2007.1
++ Revision: 144742
+- rebuild for 2007.1
+
+  + David Walluck <walluck@mandriva.org>
+    - Import lucene
+
+* Thu May 25 2006 David Walluck <walluck@mandriva.org> 0:1.9.1-2mdv2007.0
+- rebuild for libgcj.so.7
+
+* Tue Mar 28 2006 David Walluck <walluck@mandriva.org> 0:1.9.1-1mdk
+- 1.9.1
+
+* Thu Mar 02 2006 David Walluck <walluck@mandriva.org> 0:1.9-1mdk
+- 1.9
+
+* Wed Jan 18 2006 David Walluck <walluck@mandriva.org> 0:1.4.3-2.5mdk
+- fix path to aot-compile-rpm
+- BuildRequires: java-devel
+
+* Tue Oct 25 2005 David Walluck <walluck@mandriva.org> 0:1.4.3-2.4mdk
+- remove lib/junit-3.8.1.jar binary jar form source zip
+
+* Tue Oct 25 2005 David Walluck <walluck@mandriva.org> 0:1.4.3-2.3mdk
+- fix unversioned demos symlink
+
+* Tue Oct 25 2005 David Walluck <walluck@mandriva.org> 0:1.4.3-2.2mdk
+- add %%{name}{,-%%{version}}-src.zip (for eclipse)
+- add unversioned demos symlink (fix, for eclipse)
+
+* Sat May 28 2005 David Walluck <walluck@mandriva.org> 0:1.4.3-2.1mdk
+- release
+
+* Wed Apr 27 2005 Ville Skyttä <scop at jpackage.org> - 0:1.4.3-2jpp
+- Add unversioned javadoc dir symlink.
+- Crosslink with local JDK javadocs.
+- Convert specfile to UTF-8.
+- Fix URLs.
+
+* Mon Jan 10 2005 Kaj J. Niemi <kajtzu@fi.basen.net> 0:1.4.3
+- 1.4.3
+
+* Tue Aug 24 2004 Fernando Nasser <fnasser at redhat.com> - 0:1.3-3jpp
+- Rebuild with Ant 1.6.2
+
+* Wed Jun 02 2004 Randy Watler <rwatler at finali.com> - 0:1.3-2jpp
+- Upgrade to Ant 1.6.X
 

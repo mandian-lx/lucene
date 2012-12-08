@@ -1,4 +1,2 @@
 sources:
-  "lucene-2.9.4-analysis-OSGi-MANIFEST.MF:"	55e09f52f668bb766cc78e2fa47dc2b67e5f72a7
-  "lucene-2.9.4-core-OSGi-MANIFEST.MF:"	126c3c955b8b629fe76d199dfaea2dacd7ce485f
-  "lucene-2.9.4-src.tar.gz:"	bac4fdea0fcd18788d798f5cdd24fd975cca6b3f
+  "lucene-2.4.0-src.tar.gz": 7e7e59db8a006521459cde70376784bc95dac2f2
