@@ -35,7 +35,7 @@
 Summary:	High-performance, full-featured text search engine
 Name:		lucene
 Version:	2.4.0
-Release:	4
+Release:	5
 License:	Apache License
 Url:		http://lucene.apache.org/
 Group:		Development/Java
