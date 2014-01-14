@@ -1,3 +1,6 @@
 sources:
   dev-tools.tar.xz: 851293bca09f9aa4357d0b70d5dbe8c44a724604
   lucene-3.6.2-src.tgz: 49e2206bbc51df2e8d2bc1d6eb6ccf983a817ac8
+  lucene-3.6.2-3.0-omv2014.0.noarch.rpm: 916872114fcbb553e094c489454c72bce900ccac
+  lucene-contrib-3.6.2-3.0-omv2014.0.noarch.rpm: fe2d37659a769ed8cf1727d178ef1c5c7be38c11
+  lucene-javadoc-3.6.2-3.0-omv2014.0.noarch.rpm: 5cd99a7a67fa04e05708de9bcd1a85ba3a067621
