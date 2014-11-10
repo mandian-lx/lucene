@@ -32,7 +32,7 @@
 Summary:        High-performance, full-featured text search engine
 Name:           lucene
 Version:        3.6.2
-Release:        3.1%{?dist}
+Release:        3.2%{?dist}
 Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
@@ -107,7 +107,7 @@ Requires:       %{name} = %{epoch}:%{version}-%{release}
 # remove all binary libs
 find . -name "*.jar" -exec rm -f {} \;
 
-tar xfs %{SOURCE4}
+tar xf %{SOURCE4}
 pushd dev-tools
 find . -name "pom.xml.template" -exec sed -i "s/@version@/%{version}/g" '{}' \;
 popd
