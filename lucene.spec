@@ -71,7 +71,7 @@ BuildRequires:  xerces-j2
 BuildRequires:  mvn(javax.servlet:servlet-api)
 BuildRequires:  mvn(org.antlr:antlr-runtime)
 BuildRequires:  maven-local
-
+BuildRequires:  zip
 # test-framework deps
 BuildRequires:  junit
 BuildRequires:  randomizedtesting-junit4-ant
@@ -320,7 +320,6 @@ done
 for module in benchmark misc test-framework demo core/src/java facet \
         analysis/stempel codecs/src/java codecs/src/test queryparser \
         core/src/test memory .; do
-    cat ${module}/pom.xml
     %pom_remove_plugin :forbiddenapis ${module}
 done
 
