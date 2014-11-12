@@ -276,7 +276,8 @@ Summary:        Javadoc for Lucene
 %{summary}.
 
 %prep
-%autosetup -n %{pkg_name}-%{version} -S git
+%setup -n %{pkg_name}-%{version}
+%apply_patches
 
 # dependency generator expects that the directory name is just lucene
 mkdir %{pkg_name}
