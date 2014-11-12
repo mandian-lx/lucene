@@ -29,54 +29,65 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+%{?scl:%scl_package lucene}
+%{!?scl:%global pkg_name %{name}}
+
 Summary:        High-performance, full-featured text search engine
-Name:           lucene
-Version:        3.6.2
-Release:        3.2%{?dist}
+Name:           %{?scl_prefix}lucene
+Version:        4.10.1
+Release:        1%{?dist}
 Epoch:          0
 License:        ASL 2.0
 URL:            http://lucene.apache.org/
-
-Source0:        http://www.apache.org/dist/lucene/java/%{version}/%{name}-%{version}-src.tgz
+Source0:        http://www.apache.org/dist/lucene/java/%{version}/lucene-%{version}-src.tgz
 Source1:        lucene-%{version}-core-OSGi-MANIFEST.MF
 Source2:        lucene-%{version}-analysis-OSGi-MANIFEST.MF
-Source3:        ivy-conf.xml
-# DictionaryBasedBreakIterator was moved into the base RuleBasedBreakIterator
-# in icu4j. v49 => v50
-Patch0:         lucene_contrib_icu4j_v50.patch
-#svn export http://svn.apache.org/repos/asf/lucene/dev/tags/lucene_solr_3_6_2/dev-tools@r1450168
-#tar caf dev-tools.tar.xz dev-tools/
-Source4:        dev-tools.tar.xz
-BuildRequires:  jpackage-utils >= 0:1.6
-BuildRequires:  ant >= 0:1.6
-BuildRequires:  ant-junit >= 0:1.6
+Source3:        lucene-%{version}-queryparser-OSGi-MANIFEST.MF
+#svn export http://svn.apache.org/repos/asf/lucene/dev/tags/lucene_solr_4_10_1/dev-tools/
+#tar caf dev-tools-4.10.1.tar.xz dev-tools/
+Source4:        dev-tools-%{version}.tar.xz
+
+Patch0:         0001-disable-ivy-settings.patch
+Patch1:         0001-dependency-generation.patch
+
+BuildRequires:  git
+BuildRequires:  ant
+%{!?scl:BuildRequires:  ivy-local}
+%{?scl:BuildRequires:  apache-ivy}
+BuildRequires:  %{?scl_prefix}icu4j
+BuildRequires:  httpcomponents-client
+BuildRequires:  jetty-continuation
+BuildRequires:  jetty-http
+BuildRequires:  jetty-io
+BuildRequires:  jetty-server
+BuildRequires:  jetty-servlet
+BuildRequires:  jetty-util
+BuildRequires:  morfologik-stemming
+BuildRequires:  uimaj
+BuildRequires:  uima-addons
+BuildRequires:  spatial4j
+BuildRequires:  nekohtml
+BuildRequires:  xerces-j2
+BuildRequires:  mvn(javax.servlet:servlet-api)
+BuildRequires:  mvn(org.antlr:antlr-runtime)
+BuildRequires:  maven-local
+
+# test-framework deps
 BuildRequires:  junit
-BuildRequires:  javacc
-BuildRequires:  java-javadoc
-BuildRequires:  jline
-BuildRequires:  jtidy
-BuildRequires:  regexp
-BuildRequires:  apache-commons-digester
-BuildRequires:  unzip
-BuildRequires:  zip
-BuildRequires:  java-devel >= 1:1.6.0
-BuildRequires:  apache-commons-compress
-BuildRequires:  apache-ivy
-BuildRequires:  lucene
-# for tests
-BuildRequires:  subversion
-# BR for lucene-contrib
+BuildRequires:  randomizedtesting-junit4-ant
+BuildRequires:  randomizedtesting-runner
 
-BuildRequires:  icu4j
+%{?scl:Requires: %scl_runtime}
 
-
-Provides:       lucene-core = %{epoch}:%{version}-%{release}
+Provides:       %{name}-core = %{epoch}:%{version}-%{release}
 # previously used by eclipse but no longer needed
-Obsoletes:      lucene-devel < %{epoch}:%{version}-%{release}
-Obsoletes:      lucene-demo < %{epoch}:%{version}-%{release}
-BuildArch:      noarch
+Obsoletes:      %{name}-devel < %{epoch}:%{version}-%{release}
+Obsoletes:      %{name}-demo  < %{epoch}:%{version}-%{release}
+# previously distributed separately, but merged into main package
+Provides:       %{name}-contrib = %{version}-%{release}
+Obsoletes:      %{name}-contrib < %{version}-%{release}
 
-Requires:       jpackage-utils
+BuildArch:      noarch
 
 %description
 Apache Lucene is a high-performance, full-featured text search
@@ -84,169 +95,395 @@ engine library written entirely in Java. It is a technology suitable
 for nearly any application that requires full-text search, especially
 cross-platform.
 
+%package parent
+Summary:      Parent POM for Lucene
+
+%description parent
+Parent POM for Lucene.
+
+%package solr-grandparent
+Summary:      Lucene Solr grandparent POM
+
+%description solr-grandparent
+Lucene Solr grandparent POM.
+
+%package benchmark
+Summary:      Lucene Benchmarking Module
+
+%description benchmark
+Lucene Benchmarking Module.
+
+%package replicator
+Summary:      Lucene Replicator Module
+
+%description replicator
+Lucene Replicator Module.
+
+%package grouping
+Summary:      Lucene Grouping Module
+
+%description grouping
+Lucene Grouping Module.
+
+%package highlighter
+Summary:      Lucene Highlighter Module
+
+%description highlighter
+Lucene Highlighter Module.
+
+%package misc
+Summary:      Miscellaneous Lucene extensions
+
+%description misc
+Miscellaneous Lucene extensions.
+
+%package test-framework
+Summary:      Apache Lucene Java Test Framework
+
+%description test-framework
+Apache Lucene Java Test Framework.
+
+%package memory
+Summary:      Lucene Memory Module
+
+%description memory
+High-performance single-document index to compare against Query.
+
+%package expressions
+Summary:      Lucene Expressions Module
+
+%description expressions
+Dynamically computed values to sort/facet/search on based on a pluggable
+grammar.
+
+%package demo
+Summary:      Lucene Demo Module
+
+%description demo
+Demo for Apache Lucene Java.
+
+%package classification
+Summary:      Lucene Classification Module
+
+%description classification
+Lucene Classification Module.
+
+%package join
+Summary:      Lucene Join Module
+
+%description join
+Lucene Join Module.
+
+%package suggest
+Summary:      Lucene Suggest Module
+
+%description suggest
+Lucene Suggest Module.
+
+%package facet
+Summary:      Lucene Facets Module
+
+%description facet
+Package for Faceted Indexing and Search.
+
+%package analysis
+Summary:      Lucene Common Analyzers
+
+%description analysis
+Lucene Common Analyzers.
+
+%package sandbox
+Summary:      Lucene Sandbox Module
+
+%description sandbox
+Lucene Sandbox Module.
+
+%package queries
+Summary:      Lucene Queries Module
+
+%description queries
+Lucene Queries Module.
+
+%package spatial
+Summary:      Spatial Strategies for Apache Lucene
+
+%description spatial
+Spatial Strategies for Apache Lucene.
+
+%package codecs
+Summary:      Codecs and postings formats for Apache Lucene
+
+%description codecs
+Codecs and postings formats for Apache Lucene.
+
+%package queryparser
+Summary:      Lucene QueryParsers Module
+
+%description queryparser
+Lucene QueryParsers Module.
+
+%package analyzers-smartcn
+Summary:      Smart Chinese Analyzer
+
+%description analyzers-smartcn
+Lucene Smart Chinese Analyzer.
+
+%package analyzers-phonetic
+Summary:      Lucene Phonetic Filters
+
+%description analyzers-phonetic
+Provides phonetic encoding via Commons Codec.
+
+%package analyzers-icu
+Summary:      Lucene ICU Analysis Components
+
+%description analyzers-icu
+Provides integration with ICU (International Components for Unicode) for
+stronger Unicode and internationalization support.
+
+%package analyzers-morfologik
+Summary:      Lucene Morfologik Polish Lemmatizer
+
+%description analyzers-morfologik
+A dictionary-driven lemmatizer for Polish (includes morphosyntactic
+annotations).
+
+%package analyzers-uima
+Summary:      Lucene UIMA Analysis Components
+
+%description analyzers-uima
+Lucene Integration with UIMA for extracting metadata from arbitrary (text)
+fields and enrich document with features extracted from UIMA types (language,
+sentences, concepts, named entities, etc.).
+
+%package analyzers-kuromoji
+Summary:      Lucene Kuromoji Japanese Morphological Analyzer
+
+%description analyzers-kuromoji
+Lucene Kuromoji Japanese Morphological Analyzer.
+
+%package analyzers-stempel
+Summary:      Lucene Stempel Analyzer
+
+%description analyzers-stempel
+Lucene Stempel Analyzer.
+
+
 %package javadoc
 Summary:        Javadoc for Lucene
-
-Requires:       jpackage-utils
 
 %description javadoc
 %{summary}.
 
-
-%package contrib
-Summary:        Lucene contributed extensions
-
-Requires:       %{name} = %{epoch}:%{version}-%{release}
-
-%description contrib
-%{summary}.
-
-
 %prep
-%setup -q -n %{name}-%{version}
+%autosetup -n %{pkg_name}-%{version} -S git
+
+# dependency generator expects that the directory name is just lucene
+mkdir %{pkg_name}
+find -maxdepth 1 ! -name CHANGES.txt ! -name LICENSE.txt ! -name README.txt \
+    ! -name NOTICE.txt ! -name MIGRATE.txt  ! -name ivy-settings.xml \
+    ! -path %{pkg_name} -exec mv \{} %{pkg_name}/ \;
+
+tar xf %{SOURCE4}
+
+pushd %{pkg_name}
+
 # remove all binary libs
 find . -name "*.jar" -exec rm -f {} \;
 
-tar xf %{SOURCE4}
-pushd dev-tools
-find . -name "pom.xml.template" -exec sed -i "s/@version@/%{version}/g" '{}' \;
+rm sandbox/src/test/org/apache/lucene/sandbox/queries/regex/TestJakartaRegexpCapabilities.java
+
+# old API
+rm -r replicator/src/test/*
+
+# Because ivy-local is not available before F21
+%{?scl:ln -s %{_sysconfdir}/ivy/ivysettings.xml}
+
 popd
 
-iconv --from=ISO-8859-1 --to=UTF-8 CHANGES.txt > CHANGES.txt.new
+%mvn_package ":%{pkg_name}-analysis-modules-aggregator" %{pkg_name}-analysis
+%mvn_package ":%{pkg_name}-analyzers-common" %{pkg_name}-analysis
+%mvn_package ":{*}-aggregator" @1
 
-# prepare pom files (replace @version@ with real version)
-find . -name '*pom.xml.template' -exec \
-              sed -i "s:@version@:%{version}:g" '{}' \;
-
-cp %{SOURCE3} .
-
-#modify artifactIds to make it easier to map to fedora
-sed -i -e "s|ant-junit|ant/ant-junit|g" test-framework/ivy.xml
-sed -i -e "s|xercesImpl|xerces-j2|g" contrib/benchmark/ivy.xml
-sed -i -e "s|jakarta-regexp|regexp|g" contrib/queries/ivy.xml
-
-# ICU4J v50 compatibility
-%patch0 -p2
 
 %build
-mkdir -p docs
-mkdir -p lib
-export OPT_JAR_LIST="ant/ant-junit junit"
-export CLASSPATH=$(build-classpath jline jtidy regexp commons-digester apache-commons-compress ivy)
+pushd %{pkg_name}
+# generate dependencies
+ant filter-pom-templates -Divy.mode=local -Dversion=%{version}
 
+# fix source dir + move to expected place
+for pom in `find build/poms/%{pkg_name} -name pom.xml`; do
+    sed 's/\${module-path}/${basedir}/g' "$pom" > "${pom##build/poms/%{pkg_name}/}"
+done
 
-ant -Divy.settings.file=ivy-conf.xml -Dbuild.sysclasspath=first \
-  -Djavacc.home=%{_bindir}/javacc \
-  -Djavacc.jar=%{_javadir}/javacc.jar \
-  -Djavacc.jar.dir=%{_javadir} \
-  -Djavadoc.link=file://%{_javadocdir}/java \
-  -Dversion=%{version} \
-  -Dfailonjavadocwarning=false \
-  -Dmaven-tasks.uptodate=true \
-  jar-lucene-core docs javadocs-core
+for module in benchmark misc test-framework demo core/src/java facet \
+        analysis/stempel codecs/src/java codecs/src/test queryparser \
+        core/src/test memory .; do
+    %pom_remove_plugin :forbiddenapis ${module}
+done
 
+%pom_disable_module src/test core
+%pom_disable_module src/test codecs
 
-export CLASSPATH=$(build-classpath jline jtidy regexp commons-digester apache-commons-compress icu4j ivy)
-ant -Divy.settings.file=ivy-conf.xml -Dbuild.sysclasspath=first \
-  -Djavacc.home=%{_bindir}/javacc \
-  -Djavacc.jar=%{_javadir}/javacc.jar \
-  -Djavacc.jar.dir=%{_javadir} \
-  -Djavadoc.link=file://%{_javadocdir}/java \
-  -Dversion=%{version} \
-  -Dfailonjavadocwarning=false \
-  -Dmaven-tasks.uptodate=true \
-  jar-test-framework javadocs build-contrib
+# test deps
+%pom_add_dep org.ow2.asm:asm::test demo
+%pom_add_dep org.ow2.asm:asm-commons::test demo
+%pom_add_dep org.antlr:antlr-runtime::test demo
 
-    
+popd
+
+mv lucene/build/poms/pom.xml .
+
+%pom_disable_module solr
+%pom_remove_plugin :gmaven-plugin
+%pom_remove_plugin :forbiddenapis
+
+%{?scl:scl enable %{scl} - <<"EOF"}
+# For some reason TestHtmlParser.testTurkish fails when building inside SCLs
+%mvn_build -s -f
+%{?scl:EOF}
+
+pushd %{pkg_name}
+
 # add missing OSGi metadata to manifests
 mkdir META-INF
-unzip -o build/core/lucene-core-%{version}.jar META-INF/MANIFEST.MF
-cp %{SOURCE1} META-INF/MANIFEST.MF
+unzip -o core/src/java/target/lucene-core-%{version}.jar META-INF/MANIFEST.MF
+cat %{SOURCE1} >> META-INF/MANIFEST.MF
 sed -i '/^\r$/d' META-INF/MANIFEST.MF
-zip -u build/core/lucene-core-%{version}.jar META-INF/MANIFEST.MF
+zip -u core/src/java/target/lucene-core-%{version}.jar META-INF/MANIFEST.MF
 
-
-unzip -o build/contrib/analyzers/common/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
-cp %{SOURCE2} META-INF/MANIFEST.MF
+unzip -o analysis/common/target/lucene-analyzers-common-%{version}.jar META-INF/MANIFEST.MF
+cat %{SOURCE2} >> META-INF/MANIFEST.MF
 sed -i '/^\r$/d' META-INF/MANIFEST.MF
-zip -u build/contrib/analyzers/common/lucene-analyzers-%{version}.jar META-INF/MANIFEST.MF
+zip -u analysis/common/target/lucene-analyzers-common-%{version}.jar META-INF/MANIFEST.MF
 
-mv build/contrib/analyzers/common build/contrib/analyzers/analyzers
-mv dev-tools/maven/lucene/contrib/analyzers/common dev-tools/maven/lucene/contrib/analyzers/analyzers
+unzip -o queryparser/target/lucene-queryparser-%{version}.jar META-INF/MANIFEST.MF
+cat %{SOURCE3} >> META-INF/MANIFEST.MF
+sed -i '/^\r$/d' META-INF/MANIFEST.MF
+zip -u queryparser/target/lucene-queryparser-%{version}.jar META-INF/MANIFEST.MF
 
+popd
 
 %install
+%{?scl:scl enable %{scl} - <<"EOF"}
 
-# jars
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}
-install -d -m 0755 $RPM_BUILD_ROOT%{_mavenpomdir}
-install -m 0644 build/core/%{name}-core-%{version}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}.jar
-ln -sf %{name}.jar $RPM_BUILD_ROOT%{_javadir}/%{name}-core.jar
+# suggest provides spellchecker
+%mvn_alias :%{pkg_name}-suggest :%{pkg_name}-spellchecker
 
-# core pom + parents
-install -m 0644 dev-tools/maven/lucene/core/pom.xml.template \
-           $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-core.pom
-%add_maven_depmap JPP-lucene-core.pom %{name}-core.jar
-install -m 0644 dev-tools/maven/lucene/pom.xml.template \
-       $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-parent.pom
-%add_maven_depmap JPP-lucene-parent.pom
-install -m 0644 dev-tools/maven/pom.xml.template \
-       $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-solr-grandparent.pom
-%add_maven_depmap JPP-lucene-solr-grandparent.pom
+# compatibility with existing packages
+%mvn_alias :%{pkg_name}-analyzers-common :%{pkg_name}-analyzers
 
+%mvn_install
+%{?scl:EOF}
 
-# contrib jars
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib
-for c in benchmark demo facet grouping highlighter \
-         icu instantiated join memory misc pruning queries queryparser remote \
-         spatial spellchecker xml-query-parser; do
-    install -m 0644 build/contrib/$c/%{name}-${c}-%{version}.jar \
-        $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib/%{name}-${c}.jar
+%files -f .mfiles-%{pkg_name}-core
+%dir %{_javadir}/%{pkg_name}
+%doc CHANGES.txt LICENSE.txt README.txt NOTICE.txt MIGRATE.txt
 
-    install -m 0644 dev-tools/maven/lucene/contrib/$c/pom.xml.template \
-               $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
-    %add_maven_depmap JPP.lucene-contrib-lucene-$c.pom %{name}-contrib/%{name}-${c}.jar
-done
+%files parent -f .mfiles-%{pkg_name}-parent
+%files solr-grandparent -f .mfiles-%{pkg_name}-solr-grandparent
+%files benchmark -f .mfiles-%{pkg_name}-benchmark
+%files replicator -f .mfiles-%{pkg_name}-replicator
+%files grouping -f .mfiles-%{pkg_name}-grouping
+%files highlighter -f .mfiles-%{pkg_name}-highlighter
+%files misc -f .mfiles-%{pkg_name}-misc
+%files test-framework -f .mfiles-%{pkg_name}-test-framework
+%files memory -f .mfiles-%{pkg_name}-memory
+%files expressions -f .mfiles-%{pkg_name}-expressions
+%files demo -f .mfiles-%{pkg_name}-demo
+%files classification -f .mfiles-%{pkg_name}-classification
+%files join -f .mfiles-%{pkg_name}-join
+%files suggest -f .mfiles-%{pkg_name}-suggest
+%files facet -f .mfiles-%{pkg_name}-facet
+%files analysis -f .mfiles-%{pkg_name}-analysis
+%files sandbox -f .mfiles-%{pkg_name}-sandbox
+%files queries -f .mfiles-%{pkg_name}-queries
+%files spatial -f .mfiles-%{pkg_name}-spatial
+%files codecs -f .mfiles-%{pkg_name}-codecs
+%files queryparser -f .mfiles-%{pkg_name}-queryparser
+%files analyzers-smartcn -f .mfiles-%{pkg_name}-analyzers-smartcn
+%files analyzers-phonetic -f .mfiles-%{pkg_name}-analyzers-phonetic
+%files analyzers-icu -f .mfiles-%{pkg_name}-analyzers-icu
+%files analyzers-morfologik -f .mfiles-%{pkg_name}-analyzers-morfologik
+%files analyzers-uima -f .mfiles-%{pkg_name}-analyzers-uima
+%files analyzers-kuromoji -f .mfiles-%{pkg_name}-analyzers-kuromoji
+%files analyzers-stempel -f .mfiles-%{pkg_name}-analyzers-stempel
 
-# contrib analyzers
-for c in analyzers kuromoji phonetic smartcn stempel; do
-    install -m 0644 build/contrib/analyzers/$c/%{name}-${c}-%{version}.jar \
-        $RPM_BUILD_ROOT%{_javadir}/%{name}-contrib/%{name}-${c}.jar
-
-    install -m 0644 dev-tools/maven/lucene/contrib/analyzers/$c/pom.xml.template \
-               $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP.lucene-contrib-lucene-$c.pom
-    %add_maven_depmap JPP.lucene-contrib-lucene-$c.pom %{name}-contrib/%{name}-${c}.jar
-done
-
-# contrib pom
-install -m 0644 dev-tools/maven/lucene/contrib/pom.xml.template \
-       $RPM_BUILD_ROOT/%{_mavenpomdir}/JPP-lucene-contrib.pom
-%add_maven_depmap JPP-lucene-contrib.pom
-
-
-# javadoc
-install -d -m 0755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}
-cp -pr build/docs/api/* \
-  $RPM_BUILD_ROOT%{_javadocdir}/%{name}
-
-%files
-%doc CHANGES.txt LICENSE.txt README.txt NOTICE.txt
-%{_mavenpomdir}/JPP*pom
-%{_mavendepmapfragdir}/%{name}
-%{_javadir}/%{name}.jar
-%{_javadir}/%{name}-core.jar
-
-%files javadoc
+%files javadoc -f .mfiles-javadoc
 %doc LICENSE.txt
-%{_javadocdir}/%{name}
-
-
-%files contrib
-%{_javadir}/%{name}-contrib
-%doc contrib/CHANGES.txt
-
 
 %changelog
+* Fri Oct 24 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.10.1-1
+- Update to upstream 4.10.1.
+
+* Fri Sep 5 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.10.0-1
+- Update to upstream 4.10.0.
+
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0:4.8.1-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
+* Wed May 28 2014 Mikolaj Izdebski <mizdebsk@redhat.com> - 0:4.8.1-2
+- Rebuild to regenerate Maven auto-requires
+
+* Thu May 22 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.8.1-1
+- Update to 4.8.1.
+
+* Fri May 02 2014 Mat Booth <mat.booth@redhat.com> - 0:4.8.0-2
+- SCL-ize package
+
+* Fri May 02 2014 Michael Simacek <msimacek@redhat.com> - 0:4.8.0-1
+- Update to upstream release 4.8.0
+
+* Fri May 2 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.8.0-0.1
+- Initial 4.8.0 effort.
+
+* Thu Apr 17 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.7.2-1
+- Update to 4.7.2 upstream release.
+
+* Thu Apr 3 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.7.1-1
+- Update to 4.7.1 upstream release.
+
+* Tue Mar 25 2014 Michael Simacek <msimacek@redhat.com> - 0:4.7.0-8
+- Enable tests that required newer icu4j and nekohtml
+
+* Fri Mar 14 2014 Michael Simacek <msimacek@redhat.com> - 0:4.7.0-7
+- Generate dependencies for POMs
+- Revert to using POM files for build and installation (ivy files don't specify
+  interproject dependencies)
+- Split into subpackages
+- Clean up BR's
+- Remove unused patches
+- Enable tests
+
+* Thu Mar 13 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.7.0-6
+- Don't export package that is not in queryparser.
+
+* Wed Mar 12 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.7.0-5
+- Add queryparser osgi metadata properly.
+- Export lucene.analysys.standard too.
+
+* Wed Mar 12 2014 Alexander Kurtakov <akurtako@redhat.com> 0:4.7.0-4
+- Export queryParser and queryParser.classic packages for OSGi.
+
+* Thu Mar 06 2014 Severin Gehwolf <sgehwolf@redhat.com> - 0:4.7.0-3
+- Fix analyzers-common OSGi metadata: Export o.a.l.a.core and
+  fix Require-Bundle header.
+- Resolves: RHBZ#1073073
+
+* Wed Mar 05 2014 Roland Grunberg <rgrunber@redhat.com> - 0:4.7.0-2
+- Fix Bundle-RequiredExecutionEnvironment for manifests. (rhbz#1072985)
+
+* Tue Mar 04 2014 Michael Simacek <msimacek@redhat.com> - 0:4.7.0-1
+- Update to upstream version 4.7.0
+
+* Mon Feb 10 2014 Michael Simacek <msimacek@redhat.com> - 0:4.6.1-1
+- Update to upstream version 4.6.1
+- Use XMvn to resolve ivy artifacts and for installation
+- Remove contrib subpackage (was merged into main package)
+
+* Wed Nov 06 2013 Severin Gehwolf <sgehwolf@redhat.com> 0:3.6.2-4
+- Remove unneeded BR jline. Resolves RHBZ#1023015.
+
 * Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0:3.6.2-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
@@ -364,7 +601,7 @@ cp -pr build/docs/api/* \
 * Wed Jul  9 2008 Tom "spot" Callaway <tcallawa@redhat.com> - 0:2.3.1-3.2
 - drop repotag
 
-* Thu May 28 2008 Tom "spot" Callaway <tcallawa@redhat.com> - 0:2.3.1-3jpp.1
+* Wed May 28 2008 Tom "spot" Callaway <tcallawa@redhat.com> - 0:2.3.1-3jpp.1
 - fix license tag
 
 * Mon May 19 2008 Lubomir Rintel <lkundrak@v3.sk> - 0:2.3.1-3jpp.0
