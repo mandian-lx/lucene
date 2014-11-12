@@ -276,7 +276,7 @@ Summary:        Javadoc for Lucene
 %{summary}.
 
 %prep
-%setup -n %{pkg_name}-%{version}
+%setup -q -n %{pkg_name}-%{version}
 %apply_patches
 
 # dependency generator expects that the directory name is just lucene
@@ -320,6 +320,7 @@ done
 for module in benchmark misc test-framework demo core/src/java facet \
         analysis/stempel codecs/src/java codecs/src/test queryparser \
         core/src/test memory .; do
+    cat ${module}/pom.xml
     %pom_remove_plugin :forbiddenapis ${module}
 done
 
