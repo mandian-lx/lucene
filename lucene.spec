@@ -55,6 +55,7 @@ BuildRequires:  mvn(org.ow2.asm:asm)
 BuildRequires:  mvn(org.ow2.asm:asm-commons)
 BuildRequires:  mvn(xerces:xercesImpl)
 %endif
+BuildRequires:  mvn(org.apache.lucene:lucene-solr-grandparent:pom:)
 
 Provides:       %{name}-core = %{epoch}:%{version}-%{release}
 
