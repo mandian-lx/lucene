@@ -1,0 +1,207 @@
+From 207994b28ef8b6d9fe8cdfa5d95631d54f032c78 Mon Sep 17 00:00:00 2001
+From: Christine Poerschke <cpoerschke@apache.org>
+Date: Fri, 13 Oct 2017 12:46:58 +0100
+Subject: [PATCH] SOLR-11477: Disallow resolving of external entities in Lucene
+
+---
+ .../apache/lucene/queryparser/xml/CoreParser.java  | 65 ++++++++++++++++++----
+ .../lucene/queryparser/xml/DOCTYPE_TermQuery.xml   | 19 +++++++
+ .../lucene/queryparser/xml/ENTITY_TermQuery.xml    | 23 ++++++++
+ .../lucene/queryparser/xml/TestCoreParser.java     | 13 +++++
+ 4 files changed, 108 insertions(+), 12 deletions(-)
+ create mode 100644 lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/DOCTYPE_TermQuery.xml
+ create mode 100644 lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/ENTITY_TermQuery.xml
+
+diff --git a/lucene/queryparser/src/java/org/apache/lucene/queryparser/xml/CoreParser.java b/lucene/queryparser/src/java/org/apache/lucene/queryparser/xml/CoreParser.java
+index 2dd0097..d1e1930 100644
+--- a/lucene/queryparser/src/java/org/apache/lucene/queryparser/xml/CoreParser.java
++++ b/lucene/queryparser/src/java/org/apache/lucene/queryparser/xml/CoreParser.java
+@@ -22,11 +22,17 @@ import org.apache.lucene.queryparser.xml.builders.*;
+ import org.apache.lucene.search.Query;
+ import org.w3c.dom.Document;
+ import org.w3c.dom.Element;
++import org.xml.sax.EntityResolver;
++import org.xml.sax.ErrorHandler;
++import org.xml.sax.SAXException;
+ 
++import javax.xml.XMLConstants;
+ import javax.xml.parsers.DocumentBuilder;
+ import javax.xml.parsers.DocumentBuilderFactory;
++import javax.xml.parsers.ParserConfigurationException;
+ 
+ import java.io.InputStream;
++import java.util.Locale;
+ 
+ /**
+  * Assembles a QueryBuilder which uses only core Lucene Query objects
+@@ -109,6 +115,10 @@ public class CoreParser implements QueryBuilder {
+     queryFactory.addBuilder("SpanNot", snot);
+   }
+ 
++  /**
++   * Parses the given stream as XML file and returns a {@link Query}.
++   * By default this disallows external entities for security reasons.
++   */
+   public Query parse(InputStream xmlStream) throws ParserException {
+     return getQuery(parseXML(xmlStream).getDocumentElement());
+   }
+@@ -121,23 +131,47 @@ public class CoreParser implements QueryBuilder {
+     spanFactory.addBuilder(nodeName, builder);
+   }
+ 
+-  static Document parseXML(InputStream pXmlFile) throws ParserException {
+-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+-    DocumentBuilder db = null;
++  /**
++   * Returns a SAX {@link EntityResolver} to be used by {@link DocumentBuilder}.
++   * By default this returns {@link #DISALLOW_EXTERNAL_ENTITY_RESOLVER}, which disallows the
++   * expansion of external entities (for security reasons). To restore legacy behavior,
++   * override this method to return {@code null}.
++   */
++  protected EntityResolver getEntityResolver() {
++    return DISALLOW_EXTERNAL_ENTITY_RESOLVER;
++  }
++
++  /**
++   * Subclass and override to return a SAX {@link ErrorHandler} to be used by {@link DocumentBuilder}.
++   * By default this returns {@code null} so no error handler is used.
++   * This method can be used to redirect XML parse errors/warnings to a custom logger.
++   */
++  protected ErrorHandler getErrorHandler() {
++    return null;
++  }
++
++  private Document parseXML(InputStream pXmlFile) throws ParserException {
++    final DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
++    dbf.setValidating(false);
+     try {
+-      db = dbf.newDocumentBuilder();
+-    }
+-    catch (Exception se) {
+-      throw new ParserException("XML Parser configuration error", se);
++      dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
++    } catch (ParserConfigurationException e) {
++      // ignore since all implementations are required to support the
++      // {@link javax.xml.XMLConstants#FEATURE_SECURE_PROCESSING} feature
+     }
+-    org.w3c.dom.Document doc = null;
++    final DocumentBuilder db;
+     try {
+-      doc = db.parse(pXmlFile);
++      db = dbf.newDocumentBuilder();
++    } catch (Exception se) {
++      throw new ParserException("XML Parser configuration error.", se);
+     }
+-    catch (Exception se) {
+-      throw new ParserException("Error parsing XML stream:" + se, se);
++    try {
++      db.setEntityResolver(getEntityResolver());
++      db.setErrorHandler(getErrorHandler());
++      return db.parse(pXmlFile);
++    } catch (Exception se) {
++      throw new ParserException("Error parsing XML stream: " + se, se);
+     }
+-    return doc;
+   }
+ 
+ 
+@@ -145,4 +179,11 @@ public class CoreParser implements QueryBuilder {
+   public Query getQuery(Element e) throws ParserException {
+     return queryFactory.getQuery(e);
+   }
++
++  public static final EntityResolver DISALLOW_EXTERNAL_ENTITY_RESOLVER = (String publicId, String systemId) -> {
++    throw new SAXException(String.format(Locale.ENGLISH,
++        "External Entity resolving unsupported:  publicId=\"%s\" systemId=\"%s\"",
++        publicId, systemId));
++  };
++
+ }
+diff --git a/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/DOCTYPE_TermQuery.xml b/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/DOCTYPE_TermQuery.xml
+new file mode 100644
+index 0000000..28938ae
+--- /dev/null
++++ b/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/DOCTYPE_TermQuery.xml
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE TermQuery SYSTEM "foo://bar.xyz/mydtd">
++<!--
++ Licensed to the Apache Software Foundation (ASF) under one or more
++ contributor license agreements.  See the NOTICE file distributed with
++ this work for additional information regarding copyright ownership.
++ The ASF licenses this file to You under the Apache License, Version 2.0
++ (the "License"); you may not use this file except in compliance with
++ the License.  You may obtain a copy of the License at
++
++     http://www.apache.org/licenses/LICENSE-2.0
++
++ Unless required by applicable law or agreed to in writing, software
++ distributed under the License is distributed on an "AS IS" BASIS,
++ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ See the License for the specific language governing permissions and
++ limitations under the License.
++-->
++<TermQuery fieldName="contents">sumitomo</TermQuery>
+diff --git a/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/ENTITY_TermQuery.xml b/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/ENTITY_TermQuery.xml
+new file mode 100644
+index 0000000..dc59613
+--- /dev/null
++++ b/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/ENTITY_TermQuery.xml
+@@ -0,0 +1,23 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!DOCTYPE TermQuery [
++<!ENTITY internalTerm "sumitomo">
++<!ENTITY externalTerm SYSTEM "foo://bar.xyz/external">
++<!ENTITY % myParameterEntity "foo://bar.xyz/param">
++]>
++<!--
++ Licensed to the Apache Software Foundation (ASF) under one or more
++ contributor license agreements.  See the NOTICE file distributed with
++ this work for additional information regarding copyright ownership.
++ The ASF licenses this file to You under the Apache License, Version 2.0
++ (the "License"); you may not use this file except in compliance with
++ the License.  You may obtain a copy of the License at
++
++     http://www.apache.org/licenses/LICENSE-2.0
++
++ Unless required by applicable law or agreed to in writing, software
++ distributed under the License is distributed on an "AS IS" BASIS,
++ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ See the License for the specific language governing permissions and
++ limitations under the License.
++-->
++<TermQuery fieldName="contents">&internalTerm;&externalTerm;</TermQuery>
+diff --git a/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/TestCoreParser.java b/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/TestCoreParser.java
+index 5f33545..b81cd82 100644
+--- a/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/TestCoreParser.java
++++ b/lucene/queryparser/src/test/org/apache/lucene/queryparser/xml/TestCoreParser.java
+@@ -29,6 +29,7 @@ import org.apache.lucene.search.ScoreDoc;
+ import org.apache.lucene.search.TopDocs;
+ import org.apache.lucene.util.LuceneTestCase;
+ import org.junit.AfterClass;
++import org.xml.sax.SAXException;
+ 
+ import java.io.IOException;
+ import java.io.InputStream;
+@@ -66,6 +67,18 @@ public class TestCoreParser extends LuceneTestCase {
+     dumpResults("TermQuery", q, 5);
+   }
+ 
++  public void test_DOCTYPE_TermQueryXML() throws ParserException, IOException {
++    SAXException saxe = LuceneTestCase.expectThrows(ParserException.class, SAXException.class,
++        () -> parse("DOCTYPE_TermQuery.xml"));
++    assertTrue(saxe.getMessage().startsWith("External Entity resolving unsupported:"));
++  }
++
++  public void test_ENTITY_TermQueryXML() throws ParserException, IOException {
++    SAXException saxe = LuceneTestCase.expectThrows(ParserException.class, SAXException.class,
++        () -> parse("ENTITY_TermQuery.xml"));
++    assertTrue(saxe.getMessage().startsWith("External Entity resolving unsupported:"));
++  }
++
+   public void testTermQueryEmptyXML() throws ParserException, IOException {
+     parseShouldFail("TermQueryEmpty.xml",
+         "TermQuery has no text");
+-- 
+2.13.6
+
