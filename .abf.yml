@@ -1,3 +1,5 @@
-sources:
+removed_sources:
   dev-tools-4.10.1.tar.xz: 765f237ed09ef1afbcb80470c2da25ab03e60420
   lucene-4.10.1-src.tgz: a339413f64530cceaf52eee8bea3dfab9555b78e
+sources:
+  solr-6.1.0-src.tgz: fe0e18133b7c8071d07860c235d5ddf759dcd00f
